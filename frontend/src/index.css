@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Roboto", sans-serif;
+}
+
+h1,
+h2,
+h3,
+.brand-font {
+  font-family: "Inter", sans-serif;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer utilities {
+  .br {
+    @apply border border-red-500;
+  }
+  .fcc {
+    @apply flex items-center justify-center;
+  }
+  .fcb {
+    @apply flex items-center justify-between;
+  }
+  .fc {
+    @apply flex items-center;
+  }
+}
