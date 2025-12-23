@@ -61,6 +61,11 @@ export interface PaystackInitializeResponse {
   };
 }
 
+export interface RefundTransactionData {
+  transaction: string;
+  amount: number | null;
+}
+
 export interface PaystackVerifyResponse {
   status: boolean;
   message: string;
@@ -160,4 +165,3 @@ export interface JWTPayload {
   userId: string;
   phone: string;
 }
-

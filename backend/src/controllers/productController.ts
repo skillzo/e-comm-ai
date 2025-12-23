@@ -39,6 +39,9 @@ export async function getProductById(
 
     const product = await prisma.product.findUnique({
       where: { id },
+      include: {
+        productImages: true,
+      },
     });
 
     if (!product) {
@@ -63,7 +66,17 @@ export async function createProduct(
   next: NextFunction
 ) {
   try {
-    const { name, description, price, image, stock } = req.body;
+    const {
+      name,
+      description,
+      price,
+      image,
+      stock,
+      fit,
+      color,
+      rating,
+      productImages,
+    } = req.body;
 
     const product = await prisma.product.create({
       data: {
@@ -72,6 +85,22 @@ export async function createProduct(
         price,
         image: image || null,
         stock: stock || 0,
+        fit,
+        color,
+        rating: rating || 0,
+        productImages: productImages
+          ? {
+              create: productImages.map(
+                (img: { url: string; alt: string }) => ({
+                  url: img.url,
+                  alt: img.alt,
+                })
+              ),
+            }
+          : undefined,
+      },
+      include: {
+        productImages: true,
       },
     });
 
@@ -124,4 +153,3 @@ export async function updateProduct(
     next(error);
   }
 }
-

@@ -1,29 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ProductImageGallery from "../components/ProductImageGallery";
 import ColorSelector from "../components/ColorSelector";
 import SizeSelector from "../components/SizeSelector";
 import RelatedProducts from "../components/RelatedProducts";
+import { productService } from "../services/productService";
+import { useCart } from "../contexts/CartContext";
 import { ProductImage, Color, Size, Product } from "../types";
-
-const productImages: ProductImage[] = [
-  {
-    alt: "Man wearing navy athletic shorts front view",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuAMbpZ2XMGHOI5w5rVLYBELjDjcroaXzZAsfI3vY1i1EFGARY4oH2WZNJS2CCpwCOaOiGDYtqFxv8Oa6EjcxYrOa7abvnc0W2viMEIJOqy2CW7Vp59q8mTEHXkqfgWi3EKLW1ddvFapY8pDrwvnKW4ezzTga0qUrqzwf_BiAlnHWNyZWWxHup-oHrdjxfjRekACx8fxIqHTrK9XX-z-ESIXIGkq9gAXMAXFUoF1Tr3jovh1MIUrgvQE2IfIiWuS_VY7RS3mlrCbww",
-  },
-  {
-    alt: "Man wearing navy athletic shorts side view",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ1fHb_s-0fKa65neCCU6uD5EnMAJ3-I8EajzKMzaHVWCeWzUUwVr5V_D8CfNFEFdYtgxFD8RbchI4TJyqZbmlO4tZlU5swVKxHYCRdhwCqXk6U30YD8EglbrudHGtot6SYgV-J3PfEKHgNWUtVSSgwGbCHc2b6V_0ETdYuTbfOsunXaP9HDs5mVJ0-fvLV9D8X1ny8rBgXJvlHjgvH5Z1ALMXHu0ARLwcn43rOywTFcQswPEqDR1FZl2m5zlpvqBgxRON1hIoGw",
-  },
-  {
-    alt: "Close up of athletic shorts fabric and texture",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuD2pgtCSK9l8kw1L2waT3VlCAUeBrgoCl8prPxLQIMDfuk0ODb-rIwXCfmXkF7H5XeJJb5HQ2f2GCrOGj0hOxnMhxAanFXFinEjE3txySE4cLexCPIXcSw3fxsiPBwkIP7KoMaPO3tEhLVVSG2e7S3xqcAxziZ76hLhMUC5OeXwV3fjvM5rl8sMKxLPlKTtrzz58gWROsqOKgJ98o4ASk1dZ4rlx55WV35tirquqDddZHBl3HopX4fpp1eJHZ3ZvMmPnjJQg1iQUg",
-  },
-  {
-    alt: "Man stretching in athletic gear",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuA8AfqIcie5K5HDsNsuPO3oHRTpPqRNJ795RF1vHy0Z_nPDSGJOpqr2fj1JVNUY65UnybWIbXOATwbb1z2SN-ipv0alyx15nmcO8cTrNibJ-6AvdxocnuCyR8tw-bidqhGdOw-mH8GPBL0lhSVkmtApznb34Mx0q6eOnyzKSMdDz5N7XIcv2QsKKkSod0kY8D81rucJxr23vE3XB7eULASYwl50FDTcZlMJQ_WmZS4oYj-nG54KqzJYPFbPj9BalcOgOlbbWy8Nbw",
-  },
-];
+import { formatNaira } from "../utils/formatCurrency";
 
 const colors: Color[] = [
   {
@@ -74,49 +59,42 @@ const sizes: Size[] = [
   { value: "3XL" },
 ];
 
-const relatedProducts: Product[] = [
-  {
-    name: 'Arrival 5" Shorts',
-    fit: "Slim Fit",
-    color: "Core Olive",
-    rating: 4.3,
-    price: 26,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAzPMwnlrQ38tJ-0LXiuLdJ-4hLKKajmGTYISPjQ9EscZU9hPZUzKs3ytpaKRu4TOQPmGFM3RuUIPdbthyjCyoNd3UV71RAlbTm8Vq3DnabnAXjsRHpnjpuNXVzglSZmDYuanuQM23EAlwp82jwjVB91wneR2l4XYH3bcG2yoWglNXmYEVoHV4GkbcQoZWcNXi-aqw2sfJjrG0suL4-wTRoL6V7d53oZCTLn2G5btaoIVCsRkWeS2Zfa89qmLge-ztDBMdy4-KQ9Q",
-  },
-  {
-    name: 'Arrival 5" Shorts',
-    fit: "Slim Fit",
-    color: "Navy",
-    rating: 4.3,
-    price: 26,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDo3OglIxF17M1mYwMsLIVw5GVPhCHLgeY4B8afY2zlidDhe1jk8FZFkubTnNQLTwaRz6E0Q-6Nqnr4e_GLVE3m6BiP6jsckeTiiBS7m6dwLl0UXr-qPkXOHbh06K2h16raRvquBWsyiZ1zTsYg_cxq5S8RW7avCf2b-SNJOEMV9pXkGF5I3lBV8sOKVyL4IG4cuYgcBa5yEj9AkwI8H97bNLly7jVd6xEkRS7fDanoR8fCNgiSNMBW3Gt43k26hPWGcTkjkYvbvw",
-  },
-  {
-    name: 'Arrival 7" Shorts',
-    fit: "Slim Fit",
-    color: "Silhouette Grey",
-    rating: 4.2,
-    price: 26,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCecSA5cvwNVZGoMGdZQjep4XREM_JLIsmU7GcXXpc5WPJUBFegseRpZse6K1m_DUEGyDHjoODjCct87RG5warRwDm4p22TTCo4HN9lkzA3zXTESPuJVwuOHJnkurHPBI7-1ZlGlxOZ_t2HqIp-N0-f4mwEmB_A7hZCakrfckNI3ZZT3Yz2qg_h0UzZMVkCtfLycwlmy6I57yKt020I-oUFeAwJ5igkLehB5mPHjqlp60AMDEW1RDH0rYisRuLs91dKTI0W1319Pg",
-  },
-  {
-    name: 'Arrival 7" Shorts',
-    fit: "Slim Fit",
-    color: "Core Olive",
-    rating: 4.2,
-    price: 26,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuC7PpP4xDJ48l1al2TVUwSooJtyWdW0Tue77ByDu7cuaTR-EpKyQVbeKXJG5Z-_wACajgD2qYYzhS6CyAFIewPlIHbEKrVAj7s3OktWWLCkJmxyITWIaJlorOpf4099tZOLqdoV_SldAyCaUB9g0qHQMLoFrDFKzVdPcKegtT2FNJiEUUJ4bvomnnuFz9MWu2KMyArX3qTEv9ziGmKtcSMyzaAapL7WInakKmKetEHp_tP_WKEAf6Eb8R5d653NHYUKYHQmEbocwA",
-  },
-];
-
 export default function ProductDetails() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("Navy");
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({});
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) {
+        setError("Product ID is required");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await productService.getProductById(id);
+        setProduct(data);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || "Failed to load product");
+        console.error("Error fetching product:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -125,10 +103,49 @@ export default function ProductDetails() {
     }));
   };
 
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    console.log(product, selectedSize, selectedColor);
+    addToCart(product, 1, selectedSize || undefined, selectedColor);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-background-light text-text-light min-h-screen">
+        <Header />
+        <main className="max-w-[1600px] mx-auto flex justify-center items-center py-20">
+          <p className="text-gray-600">Loading product...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="bg-background-light text-text-light min-h-screen">
+        <Header />
+        <main className="max-w-[1600px] mx-auto flex justify-center items-center py-20">
+          <p className="text-red-600">Error: {error || "Product not found"}</p>
+        </main>
+      </div>
+    );
+  }
+
+  // Convert product images if available
+  const productImages: ProductImage[] = product.productImages
+    ? product.productImages.map((img) => ({
+        alt: img.alt || product.name,
+        src: img.url || img.src || product.image || "",
+      }))
+    : product.image
+    ? [{ alt: product.name, src: product.image }]
+    : [];
+
   return (
     <div className="bg-background-light text-text-light">
       <div className="w-full bg-gray-100 text-center py-2 text-xs font-medium border-b border-gray-200">
-        Refer A Friend To Earn $10 Off Your Next Purchase Of $50+ 👯
+        Refer A Friend To Earn ₦15,000 Off Your Next Purchase Of ₦75,000+ 👯
       </div>
       <Header />
       <main className="max-w-[1600px] mx-auto flex flex-col lg:flex-row">
@@ -138,16 +155,17 @@ export default function ProductDetails() {
         <div className="w-full lg:w-1/3 p-6 lg:pl-10 lg:pt-10 sticky top-16 h-fit overflow-y-auto">
           <div className="mb-4">
             <h1 className="text-3xl font-bold mb-1 uppercase tracking-tight">
-              Arrival 5" Shorts
+              {product.name}
             </h1>
-            <p className="text-gray-600 text-sm mb-3">Slim Fit</p>
-            <div className="text-xl font-medium">$26</div>
+            <p className="text-gray-600 text-sm mb-3">{product.fit}</p>
+            <div className="text-xl font-medium">
+              {formatNaira(product.price)}
+            </div>
           </div>
           <div className="flex items-center space-x-4 mb-8">
             <div className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded text-xs font-medium">
               <span className="material-icons-outlined text-sm">star</span>
-              <span>4.3</span>
-              <span className="underline text-gray-500 ml-1">(1123)</span>
+              <span>{product.rating}</span>
             </div>
             <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition">
               <span className="material-icons-outlined text-sm">
@@ -168,14 +186,28 @@ export default function ProductDetails() {
             selectedSize={selectedSize}
             onSizeSelect={setSelectedSize}
           />
-          <button className="w-full bg-primary text-white font-bold py-4 rounded uppercase tracking-wide hover:opacity-90 transition mb-4">
-            Add to bag
-          </button>
-          <div className="text-xs text-center text-gray-600 mb-6">
-            <div className="flex items-center justify-center gap-1 mb-2">
+
+          <div className="fc gap-2 mb-4 ">
+            <button
+              onClick={handleAddToCart}
+              className="flex-1 bg-black text-white font-bold py-4 rounded-full uppercase tracking-wide hover:opacity-90 transition active:scale-95"
+            >
+              Proceed to Checkout
+            </button>
+
+            <div className=" w-[20%] h-full py-4 rounded-full fcc bg-black text-white">
+              <span className="material-symbols-outlined">
+                add_shopping_cart
+              </span>
+            </div>
+          </div>
+
+          <div className="text-xs text-center text-gray-600 mb-6 mt-5">
+            <div className="mb-2 text-xs">
               <span className="font-bold text-blue-600 text-sm">PayPal</span>
               <span>
-                Pay in 4 interest-free payments on purchases of $30-$1,500.
+                Pay in 4 interest-free payments on purchases of
+                ₦45,000-₦2,250,000.
               </span>
               <a className="underline font-bold text-black" href="#">
                 Learn more
@@ -190,6 +222,7 @@ export default function ProductDetails() {
               </span>
             </div>
           </div>
+
           <div className="border-t border-gray-200 pt-4">
             <button
               onClick={() => toggleSection("description")}
@@ -200,20 +233,16 @@ export default function ProductDetails() {
                 {expandedSections.description ? "remove" : "add"}
               </span>
             </button>
-            <button
-              onClick={() => toggleSection("materials")}
-              className="w-full flex justify-between items-center py-2 text-left font-medium"
-            >
-              <span>Materials & Care</span>
-              <span className="material-icons-outlined">
-                {expandedSections.materials ? "remove" : "add"}
-              </span>
-            </button>
+            {expandedSections.description && product.description && (
+              <div
+                className="py-2 text-sm text-gray-600"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            )}
           </div>
         </div>
       </main>
-      <RelatedProducts products={relatedProducts} />
+      <RelatedProducts />
     </div>
   );
 }
-

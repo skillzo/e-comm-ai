@@ -4,13 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#000000",
-        "background-light": "#ffffff",
+        primary: "#136dec",
+        "background-light": "#f6f7f8",
+        "background-dark": "#101822",
         "gray-light": "#f5f5f5",
         "text-light": "#111111",
       },
       fontFamily: {
-        display: ["Inter", "sans-serif"],
+        display: ["Lexend", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "4px",

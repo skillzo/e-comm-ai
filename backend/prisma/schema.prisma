@@ -11,7 +11,7 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   name      String
   phone     String   @unique
   createdAt DateTime @default(now())
@@ -23,11 +23,15 @@ model User {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   name        String
+  fit         String
+  color       String
+  rating      Float
   description String?
   price       Float
   image       String?
+  productImages productImage[]
   stock       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -37,8 +41,22 @@ model Product {
   @@map("products")
 }
 
+
+model productImage {
+  id        String   @id @default(uuid())
+  productId String
+  url     String
+  alt     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
 model Order {
-  id                String      @id @default(cuid())
+  id                String      @id @default(uuid())
   userId            String
   totalAmount       Float
   status            OrderStatus @default(pending)
@@ -54,7 +72,7 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   orderId   String
   productId String
   quantity  Int

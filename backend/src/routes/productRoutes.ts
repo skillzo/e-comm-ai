@@ -18,18 +18,10 @@ const router = Router();
 router.get("/", getAllProducts);
 
 // GET /api/products/:id - Get single product
-router.get(
-  "/:id",
-  validateParams(getProductParamsSchema),
-  getProductById
-);
+router.get("/:id", validateParams(getProductParamsSchema), getProductById);
 
 // POST /api/products - Create product (optional admin)
-router.post(
-  "/",
-  validateBody(createProductSchema),
-  createProduct
-);
+router.post("/", validateBody(createProductSchema), createProduct);
 
 // PATCH /api/products/:id - Update product (optional admin)
 router.patch(
@@ -40,4 +32,3 @@ router.patch(
 );
 
 export default router;
-

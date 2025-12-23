@@ -1,7 +1,9 @@
+import axios from "axios";
 import type {
   PaystackInitializeRequest,
   PaystackInitializeResponse,
   PaystackVerifyResponse,
+  RefundTransactionData,
 } from "../types/index.js";
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -11,27 +13,35 @@ if (!PAYSTACK_SECRET_KEY) {
   throw new Error("PAYSTACK_SECRET_KEY is not set in environment variables");
 }
 
+const paystackClient = axios.create({
+  baseURL: PAYSTACK_BASE_URL,
+  headers: {
+    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  },
+});
+
 /**
  * Initialize a Paystack transaction
  */
 export async function initializeTransaction(
   data: PaystackInitializeRequest
 ): Promise<PaystackInitializeResponse> {
-  const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to initialize transaction");
+  try {
+    const response = await paystackClient.post<PaystackInitializeResponse>(
+      "/transaction/initialize",
+      data
+    );
+    console.log("paystack initializeTransaction response", response.data);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      throw new Error(
+        error.response.data.message || "Failed to initialize transaction"
+      );
+    }
+    throw new Error("Failed to initialize transaction");
   }
-
-  return response.json();
 }
 
 /**
@@ -40,22 +50,26 @@ export async function initializeTransaction(
 export async function verifyTransaction(
   reference: string
 ): Promise<PaystackVerifyResponse> {
-  const response = await fetch(
-    `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-      },
+  try {
+    const response = await paystackClient.get<PaystackVerifyResponse>(
+      `/transaction/verify/${reference}`
+    );
+
+    if (!response.data.status) {
+      throw new Error(
+        response.data.message || "Transaction verification failed"
+      );
     }
-  );
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to verify transaction");
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      throw new Error(
+        error.response.data.message || "Failed to verify transaction"
+      );
+    }
+    throw new Error("Failed to verify transaction");
   }
-
-  return response.json();
 }
 
 /**
@@ -74,3 +88,19 @@ export function verifyWebhookSignature(
   return hash === signature;
 }
 
+/**
+ * Refund a Paystack transaction
+ */
+export async function refundTransaction(data: RefundTransactionData) {
+  try {
+    const response = await paystackClient.post(`/transaction/refund`, data);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      throw new Error(
+        error.response.data.message || "Failed to refund transaction"
+      );
+    }
+    throw new Error("Failed to refund transaction");
+  }
+}

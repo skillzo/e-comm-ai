@@ -1,5 +1,6 @@
 import {
   initializeTransaction,
+  refundTransaction,
   verifyTransaction,
   verifyWebhookSignature,
 } from "../utils/paystack.js";
@@ -42,5 +43,14 @@ export class PaystackService {
   static verifyWebhook(payload: string, signature: string): boolean {
     return verifyWebhookSignature(payload, signature);
   }
-}
 
+  /**
+   * Refund a payment
+   */
+  static async refundPayment(
+    reference: string,
+    amount: number | null
+  ): Promise<void> {
+    return refundTransaction({ transaction: reference, amount });
+  }
+}

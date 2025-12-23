@@ -25,7 +25,7 @@ export async function initializePayment(
     });
 
     if (!order) {
-      throw new NotFoundError("Order");
+      throw new NotFoundError(`Order with ID ${orderId} not found`);
     }
 
     if (order.status !== "pending" && order.status !== "payment_pending") {
@@ -44,7 +44,9 @@ export async function initializePayment(
       reference,
       callback_url:
         callbackUrl ||
-        `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment/callback?reference=${reference}`,
+        `${
+          process.env.FRONTEND_URL || "http://localhost:5173"
+        }/payment/callback?reference=${reference}`,
       metadata: {
         orderId: order.id,
         userId: order.userId,
@@ -111,9 +113,22 @@ export async function verifyPayment(
         message: "Order not found for this payment reference",
       });
     }
+    if (order.totalAmount !== transaction.amount / 100) {
+      const amount = order.totalAmount * 100;
+
+      await PaystackService.refundPayment(reference, amount);
+
+      return res.status(400).json({
+        status: "error",
+        message: "Payment amount does not match order amount",
+      });
+    }
 
     // Update order status based on payment status
-    if (transaction.status === "success" && transaction.gateway_response === "Successful") {
+    if (
+      transaction.status === "success" &&
+      transaction.gateway_response === "Successful"
+    ) {
       await prisma.order.update({
         where: { id: order.id },
         data: {
@@ -217,4 +232,3 @@ export async function webhookHandler(
     });
   }
 }
-

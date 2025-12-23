@@ -1,9 +1,5 @@
 import { Router } from "express";
-import {
-  createUser,
-  login,
-  getUser,
-} from "../controllers/userController.js";
+import { createUserOrLogin, getUser } from "../controllers/userController.js";
 import { validateBody, validateParams } from "../middleware/validate.js";
 import {
   createUserSchema,
@@ -15,26 +11,9 @@ import { authenticate } from "../middleware/auth.js";
 const router = Router();
 
 // POST /api/users - Create user
-router.post(
-  "/",
-  validateBody(createUserSchema),
-  createUser
-);
-
-// POST /api/users/login - Login with phone
-router.post(
-  "/login",
-  validateBody(loginSchema),
-  login
-);
+router.post("/", validateBody(createUserSchema), createUserOrLogin);
 
 // GET /api/users/:id - Get user profile (requires authentication)
-router.get(
-  "/:id",
-  authenticate,
-  validateParams(getUserParamsSchema),
-  getUser
-);
+router.get("/:id", authenticate, validateParams(getUserParamsSchema), getUser);
 
 export default router;
-

@@ -17,18 +17,7 @@ import { authenticate } from "../middleware/auth.js";
 const router = Router();
 
 // POST /api/orders - Create order
-router.post(
-  "/",
-  validateBody(createOrderSchema),
-  createOrder
-);
-
-// GET /api/orders/:id - Get order (for tracking)
-router.get(
-  "/:id",
-  validateParams(getOrderParamsSchema),
-  getOrderById
-);
+router.post("/", validateBody(createOrderSchema), createOrder);
 
 // GET /api/orders/user/:userId - Get user orders
 router.get(
@@ -46,5 +35,7 @@ router.patch(
   updateOrderStatus
 );
 
-export default router;
+// GET /api/orders/:id - Get order (for tracking)
+router.get("/:id", validateParams(getOrderParamsSchema), getOrderById);
 
+export default router;

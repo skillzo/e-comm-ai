@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { generateToken } from "../utils/jwt.js";
-import { normalizePhoneNumber, validatePhoneNumber } from "../utils/phone.js";
-import { NotFoundError, ConflictError, ValidationError } from "../utils/errors.js";
+import { NotFoundError, ValidationError } from "../utils/errors.js";
 import { prisma } from "../utils/prisma.js";
+import { createUserSchema } from "../validations/userValidation.js";
+import { requestValidation } from "../utils/validateRequest.js";
 
 /**
  * Create a new user
  */
-export async function createUser(
+export async function createUserOrLogin(
   req: Request,
   res: Response,
   next: NextFunction
@@ -15,84 +16,50 @@ export async function createUser(
   try {
     const { name, phone } = req.body;
 
-    // Validate phone number format
-    if (!validatePhoneNumber(phone)) {
-      throw new ValidationError("Invalid phone number format");
+    const validation = requestValidation(createUserSchema, { name, phone });
+    if (!validation.success) {
+      throw new ValidationError(validation.errors || "Validation failed");
     }
-
-    // Normalize phone number
-    const normalizedPhone = normalizePhoneNumber(phone);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { phone: normalizedPhone },
+      where: { phone },
     });
 
+    // login if user already exists
     if (existingUser) {
-      throw new ConflictError("User with this phone number already exists");
+      const token = generateToken({
+        userId: existingUser.id,
+        phone: existingUser.phone,
+      });
+
+      return res.json({
+        status: "success",
+        data: {
+          user: {
+            id: existingUser.id,
+            name: existingUser.name,
+            phone: existingUser.phone,
+          },
+          token,
+        },
+      });
     }
 
     // Create user
     const user = await prisma.user.create({
       data: {
         name,
-        phone: normalizedPhone,
+        phone: phone,
       },
     });
 
-    // Generate JWT token
     const token = generateToken({
       userId: user.id,
       phone: user.phone,
     });
 
-    res.status(201).json({
-      status: "success",
-      data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          phone: user.phone,
-        },
-        token,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * Login with phone number
- */
-export async function login(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { phone } = req.body;
-
-    // Validate phone number format
-    if (!validatePhoneNumber(phone)) {
-      throw new ValidationError("Invalid phone number format");
-    }
-
-    // Normalize phone number
-    const normalizedPhone = normalizePhoneNumber(phone);
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { phone: normalizedPhone },
-    });
-
-    if (!user) {
-      throw new NotFoundError("User");
-    }
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      phone: user.phone,
-    });
-
-    res.json({
+    return res.json({
       status: "success",
       data: {
         user: {
@@ -111,11 +78,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 /**
  * Get user by ID
  */
-export async function getUser(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function getUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
 
@@ -142,4 +105,3 @@ export async function getUser(
     next(error);
   }
 }
-

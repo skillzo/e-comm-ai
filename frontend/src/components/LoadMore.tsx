@@ -10,12 +10,11 @@ export default function LoadMore({ showing, total }: LoadMoreProps) {
         Showing {showing} of {total} items
       </p>
       <div className="w-64 h-1 bg-gray-200 mx-auto rounded-full mb-6 overflow-hidden">
-        <div className="h-full bg-primary w-1/12 rounded-full"></div>
+        <div className="h-full bg-black w-1/12 rounded-full"></div>
       </div>
-      <button className="bg-primary text-white hover:bg-gray-800 px-8 py-3 font-bold uppercase tracking-wide text-sm rounded-full transition-colors">
+      <button className="bg-black text-white hover:bg-gray-800 px-8 py-3 font-bold uppercase tracking-wide text-sm rounded-full transition-colors">
         Load More
       </button>
     </div>
   );
 }
-

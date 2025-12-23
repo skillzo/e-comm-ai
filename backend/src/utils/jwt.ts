@@ -7,40 +7,20 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is not set in environment variables");
 }
 
-/**
- * Generate JWT token for user
- */
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET!, {
     expiresIn: "7d", // Token expires in 7 days
   });
 }
 
-/**
- * Verify JWT token
- */
-export function verifyToken(token: string): JWTPayload {
+export function verifyToken(token: string) {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET!) as unknown as JWTPayload;
+    if (!decoded) {
+      throw new Error("Invalid or expired token");
+    }
     return decoded;
   } catch (error) {
     throw new Error("Invalid or expired token");
   }
 }
-
-/**
- * Extract token from Authorization header
- */
-export function extractTokenFromHeader(authHeader: string | undefined): string | null {
-  if (!authHeader) {
-    return null;
-  }
-
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
-    return null;
-  }
-
-  return parts[1];
-}
-

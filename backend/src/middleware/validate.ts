@@ -9,7 +9,7 @@ export function validateBody(schema: ZodSchema) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors = error.errors.map((err) => ({
+        const errors = error.issues.map((err) => ({
           field: err.path.join("."),
           message: err.message,
         }));
@@ -27,11 +27,11 @@ export function validateBody(schema: ZodSchema) {
 export function validateQuery(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.query = schema.parse(req.query);
+      req.query = schema.parse(req.query) as Record<string, string>;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors = error.errors.map((err) => ({
+        const errors = error.issues.map((err) => ({
           field: err.path.join("."),
           message: err.message,
         }));
@@ -49,11 +49,11 @@ export function validateQuery(schema: ZodSchema) {
 export function validateParams(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.params = schema.parse(req.params);
+      req.params = schema.parse(req.params) as Record<string, string>;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors = error.errors.map((err) => ({
+        const errors = error.issues.map((err) => ({
           field: err.path.join("."),
           message: err.message,
         }));
@@ -67,4 +67,3 @@ export function validateParams(schema: ZodSchema) {
     }
   };
 }
-

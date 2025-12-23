@@ -37,4 +37,3 @@ export class ConflictError extends AppError {
     Object.setPrototypeOf(this, ConflictError.prototype);
   }
 }
-

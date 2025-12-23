@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken, extractTokenFromHeader } from "../utils/jwt.js";
+import { verifyToken } from "../utils/jwt.js";
 import { UnauthorizedError } from "../utils/errors.js";
 
 // Extend Express Request type to include user
@@ -16,7 +16,7 @@ declare global {
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
-    const token = extractTokenFromHeader(req.headers.authorization);
+    const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       throw new UnauthorizedError("No token provided");
@@ -38,23 +38,3 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     });
   }
 }
-
-// Optional authentication - doesn't fail if no token
-export function optionalAuthenticate(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const token = extractTokenFromHeader(req.headers.authorization);
-    if (token) {
-      const payload = verifyToken(token);
-      req.user = payload;
-    }
-    next();
-  } catch (error) {
-    // Continue without authentication if token is invalid
-    next();
-  }
-}
-

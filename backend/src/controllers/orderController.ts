@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import { prisma } from "../utils/prisma.js";
-import { normalizePhoneNumber, validatePhoneNumber } from "../utils/phone.js";
-import { OrderStatus } from "@prisma/client";
+import { Order, OrderStatus } from "@prisma/client";
 
 /**
  * Create order with items
@@ -13,16 +12,7 @@ export async function createOrder(
   next: NextFunction
 ) {
   try {
-    const { userId, items, phone } = req.body;
-
-    // Validate phone number
-    if (!validatePhoneNumber(phone)) {
-      throw new ValidationError("Invalid phone number format");
-    }
-
-    const normalizedPhone = normalizePhoneNumber(phone);
-
-    // Verify user exists
+    const { userId, items } = req.body;
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -33,7 +23,11 @@ export async function createOrder(
 
     // Verify all products exist and calculate total
     let totalAmount = 0;
-    const orderItemsData = [];
+    const orderItemsData: {
+      productId: string;
+      quantity: number;
+      price: number;
+    }[] = [];
 
     for (const item of items) {
       const product = await prisma.product.findUnique({
@@ -68,7 +62,7 @@ export async function createOrder(
           userId,
           totalAmount,
           status: "pending" as OrderStatus,
-          phone: normalizedPhone,
+          phone: user.phone,
           orderItems: {
             create: orderItemsData,
           },
@@ -252,4 +246,3 @@ export async function updateOrderStatus(
     next(error);
   }
 }
-
