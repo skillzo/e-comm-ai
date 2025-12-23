@@ -54,12 +54,9 @@ export default function SizeSelector({
         </span>
         <span>
           Customers say it fits{" "}
-          <span className="underline text-black font-medium">
-            true to size
-          </span>
+          <span className="underline text-black font-medium">true to size</span>
         </span>
       </div>
     </div>
   );
 }
-

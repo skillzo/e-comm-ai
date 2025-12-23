@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
+import OrderCard from "../components/OrderCard";
 import { useAuth } from "../contexts/AuthContext";
 import { orderService } from "../services/orderService";
-import type { Order } from "../types";
+import type { Order, OrderStatus } from "../types";
 import { formatNaira } from "../utils/formatCurrency";
 
 const filterOptions = ["All Orders", "Open Orders", "Cancelled", "Returns"];
@@ -31,8 +32,87 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+const getTrackingSteps = (
+  status: OrderStatus,
+  createdAt: string,
+  updatedAt?: string
+): Array<{
+  label: string;
+  date: string;
+  icon: string;
+  completed: boolean;
+  active?: boolean;
+}> => {
+  const orderDate = formatDate(createdAt);
+  const updateDate = updatedAt ? formatDate(updatedAt) : orderDate;
+
+  const steps = [
+    {
+      label: "Order Placed",
+      date: orderDate,
+      icon: "shopping_bag",
+      completed: true,
+      active: false,
+    },
+    {
+      label: "Payment",
+      date: orderDate,
+      icon: "payment",
+      completed: false,
+      active: false,
+    },
+    {
+      label: "Processing",
+      date: updateDate,
+      icon: "inventory",
+      completed: false,
+      active: false,
+    },
+    {
+      label: "Shipped",
+      date: updateDate,
+      icon: "local_shipping",
+      completed: false,
+      active: false,
+    },
+    {
+      label: "Delivered",
+      date: updateDate,
+      icon: "check_circle",
+      completed: false,
+      active: false,
+    },
+  ];
+
+  const statusMap: Record<OrderStatus, number> = {
+    pending: 0,
+    payment_pending: 1,
+    paid: 1,
+    processing: 2,
+    shipped: 3,
+    delivered: 4,
+    cancelled: 0,
+  };
+
+  const currentStep = statusMap[status] || 0;
+
+  if (status === "cancelled") {
+    return steps.map((step) => ({
+      ...step,
+      completed: false,
+      active: false,
+    }));
+  }
+
+  return steps.map((step, index) => ({
+    ...step,
+    completed: index <= currentStep,
+    active: index === currentStep,
+  }));
+};
+
 export default function OrderHistory() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +121,14 @@ export default function OrderHistory() {
   const [selectedTimeRange, setSelectedTimeRange] = useState("Last 30 Days");
   const [currentPage, setCurrentPage] = useState(1);
 
+  console.log("user", user);
+
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
       navigate("/login");
       return;
     }
@@ -51,6 +137,8 @@ export default function OrderHistory() {
       try {
         setLoading(true);
         const data = await orderService.getUserOrders(user.id);
+
+        console.log("orders data", data);
         setOrders(data);
         setError(null);
       } catch (err: any) {
@@ -62,7 +150,7 @@ export default function OrderHistory() {
     };
 
     fetchOrders();
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated]);
 
   const filteredOrders = orders.filter((order) => {
     if (selectedFilter === "All Orders") return true;
@@ -195,67 +283,57 @@ export default function OrderHistory() {
               ) : (
                 filteredOrders.map((order) => {
                   const orderItems = order.orderItems || [];
+                  const trackingSteps = getTrackingSteps(
+                    order.status,
+                    order.createdAt,
+                    order.updatedAt
+                  );
+
+                  const orderCardItems = orderItems.map((item) => ({
+                    image: item.product?.image || "",
+                    name: item.product?.name || "Product",
+                    details: `${item.product?.color || ""} • Size: ${
+                      item.product?.fit || "N/A"
+                    }`,
+                    price: formatNaira(item.price * item.quantity),
+                    status: getStatusLabel(order.status),
+                    statusIcon:
+                      order.status === "delivered" ? "check_circle" : undefined,
+                    actions: [
+                      {
+                        label: "Buy Again",
+                        onClick: () => {
+                          // TODO: Implement buy again functionality
+                          console.log("Buy again", item.productId);
+                        },
+                        primary: false,
+                      },
+                      ...(order.status === "delivered"
+                        ? [
+                            {
+                              label: "Return",
+                              onClick: () => {
+                                // TODO: Implement return functionality
+                                console.log("Return item", item.id);
+                              },
+                              primary: false,
+                            },
+                          ]
+                        : []),
+                    ],
+                  }));
+
                   return (
-                    <div
+                    <OrderCard
                       key={order.id}
-                      className="bg-white rounded-lg shadow-lg p-6"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-bold text-lg">
-                            Order #{order.id.slice(0, 8)}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(order.createdAt)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">
-                            {formatNaira(order.totalAmount)}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {getStatusLabel(order.status)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        {orderItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center gap-4 border-b pb-4"
-                          >
-                            <img
-                              src={item.product?.image || ""}
-                              alt={item.product?.name || "Product"}
-                              className="w-20 h-20 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <h4 className="font-medium">
-                                {item.product?.name || "Product"}
-                              </h4>
-                              <p className="text-sm text-gray-600">
-                                Quantity: {item.quantity} • Price:{" "}
-                                {formatNaira(item.price)}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold">
-                                {formatNaira(item.price * item.quantity)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {order.status === "shipped" && (
-                        <div className="mt-4 pt-4 border-t">
-                          <button className="text-black font-medium hover:underline">
-                            Track Package
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      orderNumber={order.id.slice(0, 8).toUpperCase()}
+                      orderDate={formatDate(order.createdAt)}
+                      total={formatNaira(order.totalAmount)}
+                      shipTo={order.phone}
+                      items={orderCardItems}
+                      trackingSteps={trackingSteps}
+                      collapsed={false}
+                    />
                   );
                 })
               )}

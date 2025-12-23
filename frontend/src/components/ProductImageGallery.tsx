@@ -31,4 +31,3 @@ export default function ProductImageGallery({
     </div>
   );
 }
-
