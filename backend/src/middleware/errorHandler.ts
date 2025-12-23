@@ -31,4 +31,3 @@ export function notFoundHandler(req: Request, res: Response) {
     message: `Route ${req.originalUrl} not found`,
   });
 }
-
