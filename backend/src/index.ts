@@ -5,6 +5,7 @@ import userRoutes from "./routes/userRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import telegramRoutes from "./routes/telegramRoutes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { prisma } from "./utils/prisma.js";
 import { webhookHandler } from "./controllers/paymentController.js";
@@ -53,6 +54,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/telegram", telegramRoutes);
 
 // Error handling
 app.use(notFoundHandler);

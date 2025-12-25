@@ -23,21 +23,3 @@ npm run dev
 ```
 
 Frontend runs on http://localhost:5173
-
-## Project Structure
-
-```
-e-comm-ai/
-├── backend/
-│   ├── server.js
-│   └── package.json
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── vite.config.js
-    ├── tailwind.config.js
-    └── package.json
-```

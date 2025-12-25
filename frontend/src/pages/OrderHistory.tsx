@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import OrderCard from "../components/OrderCard";
 import { useAuth } from "../contexts/AuthContext";
@@ -114,6 +114,7 @@ const getTrackingSteps = (
 export default function OrderHistory() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +129,12 @@ export default function OrderHistory() {
       return;
     }
 
-    if (!user) {
+    // Check for userId in URL params (from Telegram deep link)
+    const userIdParam = searchParams.get("userId");
+    const targetUserId = userIdParam || user?.id;
+
+    // If no userId available (neither from URL nor auth), redirect to login
+    if (!targetUserId) {
       navigate("/login");
       return;
     }
@@ -136,7 +142,7 @@ export default function OrderHistory() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const data = await orderService.getUserOrders(user.id);
+        const data = await orderService.getUserOrders(targetUserId);
 
         console.log("orders data", data);
         setOrders(data);
@@ -150,7 +156,7 @@ export default function OrderHistory() {
     };
 
     fetchOrders();
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, searchParams, navigate, authLoading]);
 
   const filteredOrders = orders.filter((order) => {
     if (selectedFilter === "All Orders") return true;

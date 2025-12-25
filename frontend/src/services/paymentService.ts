@@ -16,10 +16,15 @@ export const paymentService = {
     return response;
   },
 
-  async verifyPayment(reference: string): Promise<any> {
-    const response = await api.get<ApiResponse<any>>(
-      `/payments/verify/${reference}`
-    );
+  async verifyPayment(
+    reference: string,
+    telegramChatId?: string
+  ): Promise<any> {
+    let url = `/payments/verify/${reference}`;
+    if (telegramChatId) {
+      url += `?telegramChatId=${telegramChatId}`;
+    }
+    const response = await api.get<ApiResponse<any>>(url);
     return response;
   },
 };

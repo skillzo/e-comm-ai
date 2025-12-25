@@ -68,11 +68,18 @@ export default function Checkout() {
         })),
       });
 
+      // Build callback URL with telegramChatId if available
+      // Paystack will append ?reference=... to this URL
+      let callbackUrl = `${window.location.origin}/payment/callback`;
+      if (user.telegramChatId) {
+        callbackUrl += `?telegramChatId=${encodeURIComponent(user.telegramChatId)}`;
+      }
+
       // Initialize payment
       const payment = await paymentService.initializePayment({
         orderId: order.id,
         email: email || `${user.phone}@example.com`,
-        callbackUrl: `${window.location.origin}/payment/callback`,
+        callbackUrl: callbackUrl,
       });
 
       // Redirect to Paystack

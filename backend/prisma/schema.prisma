@@ -11,11 +11,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  phone          String   @unique
+  telegramChatId String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   orders Order[]
 
@@ -28,6 +29,8 @@ model Product {
   fit         String
   color       String
   rating      Float
+  alt         String?
+  aiDescription String?
   description String?
   price       Float
   image       String?

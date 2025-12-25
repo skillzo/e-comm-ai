@@ -86,6 +86,7 @@ export async function verifyPayment(
 ) {
   try {
     const { reference } = req.params;
+    const telegramChatId = req.query.telegramChatId as string | undefined;
 
     // Verify payment with Paystack
     const verification = await PaystackService.verifyPayment(reference);
@@ -135,6 +136,22 @@ export async function verifyPayment(
           status: "paid" as OrderStatus,
         },
       });
+
+      // Send Telegram notification if chatId is provided
+      if (telegramChatId) {
+        try {
+          const { sendOrderHistoryLink } = await import(
+            "../services/telegramBotService.js"
+          );
+          await sendOrderHistoryLink(parseInt(telegramChatId), order.userId);
+          console.log(
+            `Telegram notification sent for order ${order.id} to chat ${telegramChatId}`
+          );
+        } catch (error) {
+          console.error("Failed to send Telegram notification:", error);
+          // Don't fail the verification if Telegram notification fails
+        }
+      }
 
       return res.json({
         status: "success",
@@ -215,6 +232,25 @@ export async function webhookHandler(
         });
 
         console.log(`Order ${order.id} marked as paid via webhook`);
+
+        // Send Telegram notification if chatId exists in metadata
+        if (transaction.metadata?.telegramChatId) {
+          try {
+            const { sendOrderHistoryLink } = await import(
+              "../services/telegramBotService.js"
+            );
+            await sendOrderHistoryLink(
+              parseInt(transaction.metadata.telegramChatId),
+              order.userId
+            );
+            console.log(
+              `Telegram notification sent for order ${order.id} to chat ${transaction.metadata.telegramChatId}`
+            );
+          } catch (error) {
+            console.error("Failed to send Telegram notification:", error);
+            // Don't fail the webhook if Telegram notification fails
+          }
+        }
       }
     }
 

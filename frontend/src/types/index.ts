@@ -44,6 +44,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
+  telegramChatId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

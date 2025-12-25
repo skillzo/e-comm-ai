@@ -16,6 +16,7 @@ export default function PaymentCallback() {
   useEffect(() => {
     const verifyPayment = async () => {
       const reference = searchParams.get("reference");
+      const telegramChatId = searchParams.get("telegramChatId");
 
       if (!reference) {
         setStatus("error");
@@ -24,7 +25,10 @@ export default function PaymentCallback() {
       }
 
       try {
-        const response = await paymentService.verifyPayment(reference);
+        const response = await paymentService.verifyPayment(
+          reference,
+          telegramChatId || undefined
+        );
 
         if (response.status === "success" && response.data?.status === "paid") {
           setStatus("success");
