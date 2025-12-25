@@ -1,9 +1,18 @@
 /// <reference types="vite/client" />
 
-import { getBaseUrl } from "./baseUrl";
+// Get base URL from environment variable or fallback to localhost:3000
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    // Ensure it ends with /api
+    return envUrl.endsWith("/api")
+      ? envUrl
+      : `${envUrl.replace(/\/$/, "")}/api`;
+  }
+  return "http://localhost:3000/api";
+};
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as any) || "http://localhost:3000/api";
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiError {
   status: string;
@@ -16,20 +25,6 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
-  }
-
-  /**
-   * Update the base URL dynamically
-   */
-  setBaseUrl(newUrl: string): void {
-    this.baseURL = newUrl;
-  }
-
-  /**
-   * Get the current base URL
-   */
-  getBaseUrl(): string {
-    return this.baseURL;
   }
 
   private async request<T>(
@@ -88,16 +83,5 @@ class ApiClient {
   }
 }
 
-// Initialize with persisted BASE_URL or default
-const initialBaseUrl = getBaseUrl();
-export const api = new ApiClient(initialBaseUrl);
-
-// Listen for storage changes to update API client
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => {
-    if (e.key === "api_base_url") {
-      const newUrl = e.newValue || API_BASE_URL;
-      api.setBaseUrl(newUrl);
-    }
-  });
-}
+// Initialize with environment variable or default
+export const api = new ApiClient(API_BASE_URL);
