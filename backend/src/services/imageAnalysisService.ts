@@ -87,9 +87,6 @@ export async function matchProductsFromText(
 
     const matches = JSON.parse(response.choices[0]?.message?.content || "{}");
 
-    console.log("full response", response);
-    console.log("matches", matches);
-
     const exactMatches: ProductMatch[] = (matches.exactMatches || [])
       .map((id: string) => {
         const product = allProducts.find((p) => p.id === id);

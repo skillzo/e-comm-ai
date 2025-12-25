@@ -105,9 +105,15 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!product) return;
-
-    console.log(product, selectedSize, selectedColor);
     addToCart(product, 1, selectedSize || undefined, selectedColor);
+  };
+
+  const handleCheckout = () => {
+    if (!product) return;
+    // Add to cart with quantity 1 (default)
+    addToCart(product, 1, selectedSize || undefined, selectedColor);
+    // Navigate to checkout
+    navigate("/checkout");
   };
 
   if (loading) {
@@ -189,17 +195,20 @@ export default function ProductDetails() {
 
           <div className="fc gap-2 mb-4 ">
             <button
-              onClick={handleAddToCart}
+              onClick={handleCheckout}
               className="flex-1 bg-black text-white font-bold py-4 rounded-full uppercase tracking-wide hover:opacity-90 transition active:scale-95"
             >
               Proceed to Checkout
             </button>
 
-            <div className=" w-[20%] h-full py-4 rounded-full fcc bg-black text-white">
+            <button
+              onClick={handleAddToCart}
+              className=" w-[20%] h-full py-4 rounded-full fcc bg-black text-white"
+            >
               <span className="material-symbols-outlined">
                 add_shopping_cart
               </span>
-            </div>
+            </button>
           </div>
 
           <div className="text-xs text-center text-gray-600 mb-6 mt-5">

@@ -69,8 +69,6 @@ export async function handleTelegramWebhook(
   try {
     const update: TelegramUpdate = req.body;
 
-    console.log("update from telegram", update);
-
     res.status(200).json({ ok: true });
 
     // Process update asynchronously

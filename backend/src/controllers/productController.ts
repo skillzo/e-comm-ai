@@ -1,9 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { NotFoundError } from "../utils/errors.js";
 import { prisma } from "../utils/prisma.js";
+import { cache } from "../utils/cache.js";
+
+const PRODUCTS_CACHE_KEY = "products:all";
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
- * Get all products
+ * Get all products (with caching)
  */
 export async function getAllProducts(
   req: Request,
@@ -11,11 +15,25 @@ export async function getAllProducts(
   next: NextFunction
 ) {
   try {
+    // Check cache first
+    const cachedProducts = cache.get<any[]>(PRODUCTS_CACHE_KEY);
+
+    if (cachedProducts) {
+      return res.json({
+        status: "success",
+        data: { products: cachedProducts },
+      });
+    }
+
+    // Cache miss - fetch from database
     const products = await prisma.product.findMany({
       orderBy: {
         createdAt: "desc",
       },
     });
+
+    // Store in cache with 30 minute TTL
+    cache.set(PRODUCTS_CACHE_KEY, products, CACHE_TTL);
 
     res.json({
       status: "success",
@@ -104,6 +122,9 @@ export async function createProduct(
       },
     });
 
+    // Invalidate products cache when new product is created
+    cache.delete(PRODUCTS_CACHE_KEY);
+
     res.status(201).json({
       status: "success",
       data: { product },
@@ -144,6 +165,9 @@ export async function updateProduct(
         ...(stock !== undefined && { stock }),
       },
     });
+
+    // Invalidate products cache when product is updated
+    cache.delete(PRODUCTS_CACHE_KEY);
 
     res.json({
       status: "success",

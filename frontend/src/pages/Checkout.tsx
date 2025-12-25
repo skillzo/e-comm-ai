@@ -96,8 +96,6 @@ export default function Checkout() {
     }
   };
 
-  console.log(items);
-
   return (
     <div className="bg-background-light text-text-light min-h-screen">
       <Header />
