@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { prisma } from "../utils/prisma.js";
 import type { Product } from "@prisma/client";
+import { logTokenUsage } from "../utils/tokenLogger.js";
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set in environment variables");
@@ -74,6 +75,16 @@ export async function matchProductsFromText(
       temperature: 0.3,
     });
 
+    // Log token usage
+    const usage = response.usage;
+    if (usage) {
+      logTokenUsage("product_matching", {
+        promptTokens: usage.prompt_tokens || 0,
+        completionTokens: usage.completion_tokens || 0,
+        totalTokens: usage.total_tokens || 0,
+      });
+    }
+
     const matches = JSON.parse(response.choices[0]?.message?.content || "{}");
 
     console.log("full response", response);
@@ -134,6 +145,20 @@ export async function analyzeImage(imageUrl: string): Promise<string> {
       ],
       max_tokens: 300,
     });
+
+    // Log token usage
+    const usage = response.usage;
+    if (usage) {
+      logTokenUsage(
+        "image_analysis",
+        {
+          promptTokens: usage.prompt_tokens || 0,
+          completionTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+        },
+        "gpt-4-vision-preview"
+      );
+    }
 
     return response.choices[0]?.message?.content || "";
   } catch (error) {

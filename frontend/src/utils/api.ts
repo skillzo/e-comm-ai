@@ -1,3 +1,5 @@
+import { getBaseUrl } from "./baseUrl";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
@@ -12,6 +14,20 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
+  }
+
+  /**
+   * Update the base URL dynamically
+   */
+  setBaseUrl(newUrl: string): void {
+    this.baseURL = newUrl;
+  }
+
+  /**
+   * Get the current base URL
+   */
+  getBaseUrl(): string {
+    return this.baseURL;
   }
 
   private async request<T>(
@@ -68,4 +84,16 @@ class ApiClient {
   }
 }
 
-export const api = new ApiClient(API_BASE_URL);
+// Initialize with persisted BASE_URL or default
+const initialBaseUrl = getBaseUrl();
+export const api = new ApiClient(initialBaseUrl);
+
+// Listen for storage changes to update API client
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === "api_base_url") {
+      const newUrl = e.newValue || API_BASE_URL;
+      api.setBaseUrl(newUrl);
+    }
+  });
+}

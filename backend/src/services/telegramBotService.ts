@@ -1,6 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { PaystackService } from "./paystackService.js";
 import { prisma } from "../utils/prisma.js";
+import { setSession } from "./sessionService.js";
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
   throw new Error("TELEGRAM_BOT_TOKEN is not set in environment variables");
@@ -65,6 +66,12 @@ export async function sendProduct(
       reply_markup: keyboard,
     });
   }
+
+  // Store session context: user is viewing this product
+  await setSession(chatId, {
+    lastViewedProductId: product.id,
+    conversationState: "viewing_product",
+  });
 }
 
 /**

@@ -7,6 +7,7 @@ import OrderHistory from "./pages/OrderHistory";
 import Login from "./pages/Login";
 import Checkout from "./pages/Checkout";
 import PaymentCallback from "./pages/PaymentCallback";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
             <Route path="/orders" element={<OrderHistory />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/payment/callback" element={<PaymentCallback />} />
-
+            <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </Router>

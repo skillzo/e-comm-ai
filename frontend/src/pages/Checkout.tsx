@@ -72,7 +72,9 @@ export default function Checkout() {
       // Paystack will append ?reference=... to this URL
       let callbackUrl = `${window.location.origin}/payment/callback`;
       if (user.telegramChatId) {
-        callbackUrl += `?telegramChatId=${encodeURIComponent(user.telegramChatId)}`;
+        callbackUrl += `?telegramChatId=${encodeURIComponent(
+          user.telegramChatId
+        )}`;
       }
 
       // Initialize payment

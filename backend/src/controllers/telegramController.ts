@@ -13,6 +13,8 @@ import {
 } from "../services/imageAnalysisService.js";
 import { prisma } from "../utils/prisma.js";
 import { PaystackService } from "../services/paystackService.js";
+import { getSession, setSession } from "../services/sessionService.js";
+import { detectIntent } from "../services/intentDetectionService.js";
 
 interface TelegramUpdate {
   update_id: number;
@@ -235,8 +237,133 @@ async function handleTextMessage(
     return;
   }
 
+  // Check for context-aware queries using AI intent detection
+  const session = await getSession(chatId);
+  const hasProductContext = !!session?.lastViewedProductId;
+
+  if (hasProductContext) {
+    // Use AI to detect intent
+    const intent = await detectIntent(text, hasProductContext);
+
+    if (intent === "product_images") {
+      await handleProductImagesRequest(chatId, session.lastViewedProductId!);
+      return;
+    }
+
+    if (intent === "product_info") {
+      await handleProductInfoRequest(
+        chatId,
+        session.lastViewedProductId!,
+        text
+      );
+      return;
+    }
+
+    // If intent is "search" or "other", fall through to product search
+  }
+
   // Default: Treat as product search query
   await handleProductSearch(chatId, text, userId, userName);
+}
+
+/**
+ * Handle product images request
+ */
+async function handleProductImagesRequest(chatId: number, productId: string) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        productImages: true,
+      },
+    });
+
+    if (!product) {
+      await sendMessage(chatId, "❌ Product not found.");
+      return;
+    }
+
+    if (!product.productImages || product.productImages.length === 0) {
+      await sendMessage(
+        chatId,
+        `📷 No additional images available for *${product.name}*.`,
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    await sendMessage(
+      chatId,
+      `📷 Showing ${product.productImages.length} image(s) for *${product.name}*:`,
+      { parse_mode: "Markdown" }
+    );
+
+    // Send all product images
+    for (const img of product.productImages) {
+      await bot.sendPhoto(chatId, img.url, {
+        caption: img.alt || product.name,
+      });
+    }
+
+    // Keep context
+    await setSession(chatId, {
+      lastViewedProductId: productId,
+      conversationState: "viewing_product",
+    });
+  } catch (error: any) {
+    console.error("Error fetching product images:", error);
+    await sendMessage(chatId, "❌ Failed to load product images.");
+  }
+}
+
+/**
+ * Handle product info request
+ */
+async function handleProductInfoRequest(
+  chatId: number,
+  productId: string,
+  userQuery: string
+) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        productImages: true,
+      },
+    });
+
+    if (!product) {
+      await sendMessage(chatId, "❌ Product not found.");
+      return;
+    }
+
+    // Build product info message
+    let infoMessage = `*${product.name}*\n\n`;
+    infoMessage += `💰 Price: ₦${product.price.toLocaleString()}\n`;
+    infoMessage += `🎨 Color: ${product.color}\n`;
+    infoMessage += `📏 Fit: ${product.fit}\n`;
+    infoMessage += `⭐ Rating: ${product.rating}\n`;
+    infoMessage += `📦 Stock: ${product.stock} available\n`;
+
+    if (product.description) {
+      infoMessage += `\n📝 Description: ${product.description}\n`;
+    }
+
+    if (product.aiDescription) {
+      infoMessage += `\n🤖 AI Description: ${product.aiDescription}\n`;
+    }
+
+    await sendMessage(chatId, infoMessage, { parse_mode: "Markdown" });
+
+    // Keep context
+    await setSession(chatId, {
+      lastViewedProductId: productId,
+      conversationState: "viewing_product",
+    });
+  } catch (error: any) {
+    console.error("Error fetching product info:", error);
+    await sendMessage(chatId, "❌ Failed to load product information.");
+  }
 }
 
 /**
@@ -282,6 +409,11 @@ async function handleProductSearch(
         matchType: m.matchType,
       }))
     );
+
+    // Update session state to searching
+    await setSession(chatId, {
+      conversationState: "searching",
+    });
   } catch (error: any) {
     console.error("Product search error:", error);
     await sendMessage(
