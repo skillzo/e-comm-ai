@@ -1,7 +1,9 @@
+/// <reference types="vite/client" />
+
 import { getBaseUrl } from "./baseUrl";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+  (import.meta.env.VITE_API_URL as any) || "http://localhost:3000/api";
 
 export interface ApiError {
   status: string;
@@ -38,6 +40,7 @@ class ApiClient {
 
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };
@@ -45,6 +48,7 @@ class ApiClient {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
+      credentials: "include",
     });
 
     const data = await response.json();
