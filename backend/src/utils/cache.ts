@@ -1,70 +1,117 @@
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
-}
+import Redis from "ioredis";
+
+// Initialize Redis client with error handling
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+  maxRetriesPerRequest: 3,
+});
+
+// Handle Redis connection errors
+redis.on("error", (error) => {
+  console.error("Redis cache connection error:", error);
+});
+
+redis.on("connect", () => {
+  console.log("Redis cache connected successfully");
+});
 
 class Cache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private keyPrefix = "cache:";
 
   /**
    * Set a value in cache with TTL in milliseconds
    */
-  set<T>(key: string, value: T, ttlMs: number): void {
-    const expiresAt = Date.now() + ttlMs;
-    this.cache.set(key, { data: value, expiresAt });
+  async set<T>(key: string, value: T, ttlMs: number): Promise<void> {
+    try {
+      const redisKey = `${this.keyPrefix}${key}`;
+      const ttlSeconds = Math.ceil(ttlMs / 1000);
+      await redis.setex(redisKey, ttlSeconds, JSON.stringify(value));
+    } catch (error) {
+      console.error("Error setting cache:", error);
+      // Don't throw - cache failures shouldn't break the app
+    }
   }
 
   /**
    * Get a value from cache, returns null if expired or not found
    */
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const redisKey = `${this.keyPrefix}${key}`;
+      const data = await redis.get(redisKey);
 
-    if (!entry) {
+      if (!data) {
+        return null;
+      }
+
+      return JSON.parse(data) as T;
+    } catch (error) {
+      console.error("Error getting cache:", error);
       return null;
     }
-
-    // Check if expired
-    if (Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
   }
 
   /**
    * Delete a key from cache
    */
-  delete(key: string): void {
-    this.cache.delete(key);
-  }
-
-  /**
-   * Clear all cache
-   */
-  clear(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Clean expired entries (can be called periodically)
-   */
-  cleanExpired(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
-      if (now > entry.expiresAt) {
-        this.cache.delete(key);
-      }
+  async delete(key: string): Promise<void> {
+    try {
+      const redisKey = `${this.keyPrefix}${key}`;
+      await redis.del(redisKey);
+    } catch (error) {
+      console.error("Error deleting cache:", error);
+      // Don't throw - cache failures shouldn't break the app
     }
+  }
+
+  /**
+   * Clear all cache entries (with the cache prefix)
+   */
+  async clear(): Promise<void> {
+    try {
+      const keys = await redis.keys(`${this.keyPrefix}*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      // Don't throw - cache failures shouldn't break the app
+    }
+  }
+
+  /**
+   * Generate a cache key from input parts
+   */
+  generateKey(prefix: string, ...parts: (string | number)[]): string {
+    const normalized = parts
+      .map((p) => String(p).toLowerCase().trim().replace(/\s+/g, "_"))
+      .join(":");
+    return `${prefix}:${normalized}`;
+  }
+
+  /**
+   * Hash a long string for cache key (useful for URLs or long text)
+   */
+  hashString(str: string): string {
+    // Simple hash function for cache keys
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
   }
 }
 
 export const cache = new Cache();
 
-// Clean expired entries every 5 minutes
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    cache.cleanExpired();
-  }, 5 * 60 * 1000); // 5 minutes
+/**
+ * Close Redis connection (for graceful shutdown)
+ */
+export async function closeCacheRedis(): Promise<void> {
+  await redis.quit();
 }

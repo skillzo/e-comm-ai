@@ -15,7 +15,7 @@ export default function Header() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-background-light backdrop-blur-lg">
+    <nav className="sticky top-0 z-50 bg-background-light backdrop-blur-xs">
       <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <Link className="text-sm font-medium hover:text-gray-600" to="/">

@@ -16,7 +16,7 @@ export async function getAllProducts(
 ) {
   try {
     // Check cache first
-    const cachedProducts = cache.get<any[]>(PRODUCTS_CACHE_KEY);
+    const cachedProducts = await cache.get<any[]>(PRODUCTS_CACHE_KEY);
 
     if (cachedProducts) {
       return res.json({
@@ -33,7 +33,7 @@ export async function getAllProducts(
     });
 
     // Store in cache with 30 minute TTL
-    cache.set(PRODUCTS_CACHE_KEY, products, CACHE_TTL);
+    await cache.set(PRODUCTS_CACHE_KEY, products, CACHE_TTL);
 
     res.json({
       status: "success",
@@ -123,7 +123,7 @@ export async function createProduct(
     });
 
     // Invalidate products cache when new product is created
-    cache.delete(PRODUCTS_CACHE_KEY);
+    await cache.delete(PRODUCTS_CACHE_KEY);
 
     res.status(201).json({
       status: "success",
@@ -167,7 +167,7 @@ export async function updateProduct(
     });
 
     // Invalidate products cache when product is updated
-    cache.delete(PRODUCTS_CACHE_KEY);
+    await cache.delete(PRODUCTS_CACHE_KEY);
 
     res.json({
       status: "success",

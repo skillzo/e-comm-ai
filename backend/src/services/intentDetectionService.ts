@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { logTokenUsage } from "../utils/tokenLogger.js";
+import { cache } from "../utils/cache.js";
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set in environment variables");
@@ -21,6 +22,17 @@ export async function detectIntent(
   // If no product context, it's likely a search
   if (!hasProductContext) {
     return "search";
+  }
+
+  // Create cache key from normalized message
+  const normalizedMessage = userMessage.toLowerCase().trim();
+  const cacheKey = cache.generateKey("intent", normalizedMessage);
+
+  // Try cache first
+  const cached = await cache.get<Intent>(cacheKey);
+  if (cached) {
+    console.log("✅ Cache hit: intent detection");
+    return cached;
   }
 
   try {
@@ -71,12 +83,18 @@ export async function detectIntent(
       "search",
       "other",
     ];
+
+    let detectedIntent: Intent;
     if (intent && validIntents.includes(intent as Intent)) {
-      return intent as Intent;
+      detectedIntent = intent as Intent;
+    } else {
+      detectedIntent = fallbackIntentDetection(userMessage);
     }
 
-    // Fallback to keyword matching if AI response is invalid
-    return fallbackIntentDetection(userMessage);
+    // Cache for 1 hour (intent patterns are relatively stable)
+    await cache.set(cacheKey, detectedIntent, 60 * 60 * 1000);
+
+    return detectedIntent;
   } catch (error) {
     console.error("Error in intent detection:", error);
     // Fallback to keyword matching

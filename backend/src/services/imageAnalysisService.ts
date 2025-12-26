@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { prisma } from "../utils/prisma.js";
 import type { Product } from "@prisma/client";
 import { logTokenUsage } from "../utils/tokenLogger.js";
+import { cache } from "../utils/cache.js";
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set in environment variables");
@@ -23,6 +24,17 @@ interface ProductMatch {
 export async function findSimilarProducts(
   referenceProductIds: string[]
 ): Promise<ProductMatch[]> {
+  // Create cache key from sorted product IDs
+  const sortedIds = [...referenceProductIds].sort().join(",");
+  const cacheKey = cache.generateKey("similar_products", sortedIds);
+
+  // Try to get from cache first
+  const cached = await cache.get<ProductMatch[]>(cacheKey);
+  if (cached) {
+    console.log("✅ Cache hit: similar products");
+    return cached;
+  }
+
   // Get all products
   const allProducts = await prisma.product.findMany({
     include: {
@@ -119,7 +131,12 @@ export async function findSimilarProducts(
       })
       .filter(Boolean) as ProductMatch[];
 
-    return similarProducts.slice(0, 5);
+    const results = similarProducts.slice(0, 5);
+
+    // Cache the results for 24 hours (similar products don't change often)
+    await cache.set(cacheKey, results, 24 * 60 * 60 * 1000);
+
+    return results;
   } catch (error) {
     console.error("Similar products error:", error);
     // Fallback: find products with similar attributes
@@ -177,6 +194,17 @@ function findSimilarProductsFallback(
 export async function matchProductsFromText(
   userDescription: string
 ): Promise<ProductMatch[]> {
+  // Normalize description for cache key
+  const normalizedDesc = userDescription.toLowerCase().trim();
+  const cacheKey = cache.generateKey("product_match", normalizedDesc);
+
+  // Try cache first
+  const cached = await cache.get<ProductMatch[]>(cacheKey);
+  if (cached) {
+    console.log("✅ Cache hit: product match");
+    return cached;
+  }
+
   // Get all products
   const allProducts = await prisma.product.findMany({
     include: {
@@ -282,6 +310,10 @@ export async function matchProductsFromText(
 
     // Return exact matches first, then related (limit to 5 total)
     const results = [...exactMatches, ...relatedMatches].slice(0, 5);
+
+    // Cache for 12 hours (product descriptions might change, but not frequently)
+    await cache.set(cacheKey, results, 12 * 60 * 60 * 1000);
+
     return results;
   } catch (error) {
     console.error("Product matching error:", error);
@@ -294,6 +326,19 @@ export async function matchProductsFromText(
  * Analyze image using OpenAI Vision API (SECONDARY METHOD - for image support)
  */
 export async function analyzeImage(imageUrl: string): Promise<string> {
+  // Use image URL hash as cache key (URLs can be very long)
+  const cacheKey = cache.generateKey(
+    "image_analysis",
+    cache.hashString(imageUrl)
+  );
+
+  // Try cache first
+  const cached = await cache.get<string>(cacheKey);
+  if (cached) {
+    console.log("✅ Cache hit: image analysis");
+    return cached;
+  }
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4-vision-preview", // or "gpt-4o" if available
@@ -331,7 +376,12 @@ export async function analyzeImage(imageUrl: string): Promise<string> {
       );
     }
 
-    return response.choices[0]?.message?.content || "";
+    const description = response.choices[0]?.message?.content || "";
+
+    // Cache image analysis for 7 days (images don't change)
+    await cache.set(cacheKey, description, 7 * 24 * 60 * 60 * 1000);
+
+    return description;
   } catch (error) {
     console.error("OpenAI Vision API error:", error);
     throw new Error("Failed to analyze image");
