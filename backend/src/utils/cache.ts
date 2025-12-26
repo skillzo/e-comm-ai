@@ -19,7 +19,7 @@ class Cache {
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
@@ -68,4 +68,3 @@ if (typeof setInterval !== "undefined") {
     cache.cleanExpired();
   }, 5 * 60 * 1000); // 5 minutes
 }
-

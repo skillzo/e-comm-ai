@@ -86,7 +86,6 @@ export async function verifyPayment(
 ) {
   try {
     const { reference } = req.params;
-    const telegramChatId = req.query.telegramChatId as string | undefined;
 
     // Verify payment with Paystack
     const verification = await PaystackService.verifyPayment(reference);
@@ -99,6 +98,11 @@ export async function verifyPayment(
     }
 
     const transaction = verification.data;
+
+    // Get telegramChatId from metadata (for Telegram payments) or query params (for web payments)
+    const telegramChatId =
+      transaction.metadata?.telegramChatId ||
+      (req.query.telegramChatId as string | undefined);
 
     // Find order by reference
     const order = await prisma.order.findFirst({

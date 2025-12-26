@@ -10,6 +10,7 @@ import {
 import {
   matchProductsFromText,
   matchProductsFromImage,
+  findSimilarProducts,
 } from "../services/imageAnalysisService.js";
 import { prisma } from "../utils/prisma.js";
 import { PaystackService } from "../services/paystackService.js";
@@ -383,10 +384,69 @@ async function handleProductSearch(
       return;
     }
 
+    const lowerQuery = searchQuery.toLowerCase().trim();
+
+    // Check if user is asking for similar products
+    const similarPatterns = [
+      /show me more (products|items) (like|similar to|of)/i,
+      /more (products|items) (like|similar to|of)/i,
+      /similar (products|items) (to|like)/i,
+      /products (like|similar to)/i,
+    ];
+
+    const isSimilarRequest = similarPatterns.some((pattern) =>
+      pattern.test(searchQuery)
+    );
+
+    if (isSimilarRequest) {
+      await handleSimilarProductsRequest(chatId, searchQuery);
+      return;
+    }
+
+    // Check if user is asking for pictures/images
+    const picturePatterns = [
+      /show me (pictures|images|photos) of/i,
+      /(pictures|images|photos) of/i,
+      /can i see (more )?(pictures|images|photos)/i,
+      /(pictures|images|photos)/i,
+      /show (pictures|images|photos)/i,
+    ];
+
+    const isPictureRequest = picturePatterns.some((pattern) =>
+      pattern.test(searchQuery)
+    );
+
     await sendMessage(chatId, "🔍 Searching for products... Please wait.");
 
     // Match products from text description
     const matches = await matchProductsFromText(searchQuery.trim());
+
+    // If it's a picture request and we have exact matches, show images
+    if (isPictureRequest && matches.length > 0) {
+      const exactMatch = matches.find((m) => m.matchType === "exact");
+      if (exactMatch) {
+        await handleProductImagesRequest(chatId, exactMatch.product.id);
+        return;
+      }
+      // If no exact match but we have matches, use the first one
+      if (matches.length > 0) {
+        await handleProductImagesRequest(chatId, matches[0].product.id);
+        return;
+      }
+    }
+
+    // Check if the response includes reference products (user mentioned specific products)
+    if (matches.length > 0) {
+      // Check if user wants more like the returned products
+      const wantsMoreLike = /more|similar|like|show me more/i.test(searchQuery);
+
+      if (wantsMoreLike && matches.length > 0) {
+        // Extract product IDs from matches
+        const referenceIds = matches.map((m) => m.product.id);
+        await handleSimilarProductsRequest(chatId, searchQuery, referenceIds);
+        return;
+      }
+    }
 
     if (matches.length === 0) {
       await sendMessage(
@@ -394,7 +454,8 @@ async function handleProductSearch(
         "❌ No products found matching your description. Please try:\n" +
           "• Using different keywords\n" +
           "• Being more specific (e.g., 'red t-shirt' instead of 'shirt')\n" +
-          "• Sending a product image"
+          "• Sending a product image\n" +
+          "• Or say 'show me more products like [product name]'"
       );
       return;
     }
@@ -417,6 +478,85 @@ async function handleProductSearch(
     await sendMessage(
       chatId,
       "❌ Sorry, I couldn't process your search. Please try again with a different description or send an image."
+    );
+  }
+}
+
+/**
+ * Handle requests for similar products
+ */
+async function handleSimilarProductsRequest(
+  chatId: number,
+  searchQuery: string,
+  referenceProductIds?: string[]
+) {
+  try {
+    await sendMessage(chatId, "🔍 Finding similar products... Please wait.");
+
+    let productIds: string[] = [];
+
+    // If reference IDs provided, use them
+    if (referenceProductIds && referenceProductIds.length > 0) {
+      productIds = referenceProductIds;
+    } else {
+      // Try to extract product names/IDs from query using AI
+      // First, get all products to search for matches
+      const allProducts = await prisma.product.findMany({
+        select: { id: true, name: true },
+      });
+
+      // Use AI to extract product names/IDs from the query
+      const { matchProductsFromText } = await import(
+        "../services/imageAnalysisService.js"
+      );
+      const matches = await matchProductsFromText(searchQuery);
+
+      if (matches.length > 0) {
+        productIds = matches.map((m) => m.product.id);
+      } else {
+        // Try to find products by name in the query
+        const queryLower = searchQuery.toLowerCase();
+        const foundProducts = allProducts.filter((p) =>
+          queryLower.includes(p.name.toLowerCase())
+        );
+        productIds = foundProducts.map((p) => p.id);
+      }
+    }
+
+    if (productIds.length === 0) {
+      await sendMessage(
+        chatId,
+        "❌ I couldn't identify which products you're referring to. Please try:\n" +
+          "• 'show me more products like [product name]'\n" +
+          "• Or search for products first, then ask for similar ones"
+      );
+      return;
+    }
+
+    // Find similar products
+    const similarProducts = await findSimilarProducts(productIds);
+
+    if (similarProducts.length === 0) {
+      await sendMessage(
+        chatId,
+        "❌ No similar products found. Try searching for different products."
+      );
+      return;
+    }
+
+    // Send similar products
+    await sendProducts(
+      chatId,
+      similarProducts.map((m) => ({
+        product: m.product,
+        matchType: m.matchType,
+      }))
+    );
+  } catch (error: any) {
+    console.error("Similar products error:", error);
+    await sendMessage(
+      chatId,
+      "❌ Sorry, I couldn't find similar products. Please try again."
     );
   }
 }
