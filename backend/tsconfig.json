@@ -2,20 +2,18 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["*"]
-    },
-    "moduleResolution": "Node",
-    "outDir": "dist",
-    "importsNotUsedAsValues": "remove",
+    "lib": ["ESNext"],
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "types": ["node"],
     "typeRoots": ["./src/types", "./node_modules/@types"]
   },
   "include": ["src/**/*", "types"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
